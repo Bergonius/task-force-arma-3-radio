@@ -24,40 +24,50 @@ TeamspeakServerData::~TeamspeakServerData() {
 }
 
 std::vector<dataType::TSClientID> TeamspeakServerData::getMutedClients() {
-	LockGuard_shared<CriticalSectionLock> lock(&m_criticalSection);
+	LockGuard_shared lock(&m_criticalSection);
 	return mutedClients;
 }
 
 void TeamspeakServerData::setClientMuteStatus(TSClientID clientID, bool muted) {
 	if (!clientID) return;
-	LockGuard_exclusive<CriticalSectionLock> lock(&m_criticalSection);
+	LockGuard_exclusive lock(&m_criticalSection);
 	mutedClients.erase(std::remove(mutedClients.begin(), mutedClients.end(), clientID), mutedClients.end());
 	if (muted)
 		mutedClients.push_back(clientID);
 }
 
 void TeamspeakServerData::clearMutedClients() {
-	LockGuard_exclusive<CriticalSectionLock> lock(&m_criticalSection);
+	LockGuard_exclusive lock(&m_criticalSection);
 	mutedClients.clear();
 }
 
+dataType::TSClientID TeamspeakServerData::getMyClientID() {
+	LockGuard_shared lock(&m_criticalSection);
+	return myClientID;
+}
+
+void TeamspeakServerData::setMyClientID(dataType::TSClientID val) {
+	LockGuard_exclusive lock(&m_criticalSection);
+	myClientID = val;
+}
+
 std::string TeamspeakServerData::getMyOriginalNickname() {
-	LockGuard_shared<CriticalSectionLock> lock(&m_criticalSection);
+	LockGuard_shared lock(&m_criticalSection);
 	return myOriginalNickname;
 }
 
 void TeamspeakServerData::setMyOriginalNickname(std::string val) {
-	LockGuard_exclusive<CriticalSectionLock> lock(&m_criticalSection);
+	LockGuard_exclusive lock(&m_criticalSection);
 	myOriginalNickname = val;
 }
 
 dataType::TSChannelID TeamspeakServerData::getMyOriginalChannel() {
-	LockGuard_shared<CriticalSectionLock> lock(&m_criticalSection);
+	LockGuard_shared lock(&m_criticalSection);
 	return myOriginalChannel;
 }
 
 void TeamspeakServerData::setMyOriginalChannel(TSChannelID val) {
-	LockGuard_exclusive<CriticalSectionLock> lock(&m_criticalSection);
+	LockGuard_exclusive lock(&m_criticalSection);
 	myOriginalChannel = val;
 }
 
@@ -82,7 +92,7 @@ void Teamspeak::unmuteAll(TSServerID serverConnectionHandlerID) {
 	if ((error = ts3Functions.getClientList(serverConnectionHandlerID, &ids)) != ERROR_ok) {
 		log("Error getting all clients from server", error);
 		return;
-	}
+}
 #else
 	std::vector<TSClientID> mutedClients = getInstance().serverData[serverConnectionHandlerID].getMutedClients();
 	mutedClients.push_back(0);//Null-terminate so we can send it to requestUnmuteClients
@@ -97,7 +107,7 @@ void Teamspeak::unmuteAll(TSServerID serverConnectionHandlerID) {
 #else
 	getInstance().serverData[serverConnectionHandlerID].clearMutedClients();
 #endif
-}
+	}
 
 void Teamspeak::setClientMute(TSServerID serverConnectionHandlerID, TSClientID clientID, bool mute) {
 	if (!clientID)		return;
@@ -119,7 +129,7 @@ void Teamspeak::setClientMute(TSServerID serverConnectionHandlerID, TSClientID c
 }
 
 void Teamspeak::moveToSeriousChannel(TSServerID serverConnectionHandlerID) {
-	auto seriousChannelID = findChannelByName(serverConnectionHandlerID,TFAR::config.get<std::string>(Setting::serious_channelName));
+	auto seriousChannelID = findChannelByName(serverConnectionHandlerID, TFAR::config.get<std::string>(Setting::serious_channelName));
 	if (!seriousChannelID) //Channel not found
 		return;
 	auto currentChannel = getCurrentChannel(serverConnectionHandlerID);
@@ -190,7 +200,7 @@ void Teamspeak::_onConnectStatusChangeEvent(TSServerID serverConnectionHandlerID
 
 		//Directory has to exist.. It should be added in onTeamspeakServerConnect
 		auto clientDataDir = TFAR::getServerDataDirectory()->getClientDataDirectory(serverConnectionHandlerID);
-		
+
 		//set our clientData ptr
 		clientDataDir->myClientData = clientDataDir->getClientData(getMyId(serverConnectionHandlerID));
 
@@ -218,14 +228,14 @@ void Teamspeak::_onChannelSwitchedEvent(TSServerID serverConnectionHandlerID, TS
 void Teamspeak::_onClientMoved(TSServerID serverConnectionHandlerID, TSClientID clientID, TSChannelID oldChannel, TSChannelID newChannel) {
 	if (clientID == getMyId(serverConnectionHandlerID)) {// we switched channel
 		_onChannelSwitchedEvent(serverConnectionHandlerID, newChannel);
-		return; 
+		return;
 	}
-		
+
 	if (getInstance().serverData[serverConnectionHandlerID].myLastKnownChannel == newChannel) {
 		std::string clientNickname = getClientNickname(serverConnectionHandlerID, clientID);
 		if (clientNickname.empty()) return;
 		TFAR::getInstance().onTeamspeakClientJoined(serverConnectionHandlerID, clientID, clientNickname);
-	} else if (getInstance().serverData[serverConnectionHandlerID].myLastKnownChannel == oldChannel){
+	} else if (getInstance().serverData[serverConnectionHandlerID].myLastKnownChannel == oldChannel) {
 		TFAR::getInstance().onTeamspeakClientLeft(serverConnectionHandlerID, clientID);
 	}
 }
@@ -250,23 +260,23 @@ void Teamspeak::_onClientUpdated(TSServerID serverConnectionHandlerID, TSClientI
 }
 
 void Teamspeak::_onInit() {
-	   //Called on pluginInit. Should check what servers we are connected to and cause according events
+	//Called on pluginInit. Should check what servers we are connected to and cause according events
 
 
 
 	std::vector<TSServerID> connectedServers;
 	uint64* servers = nullptr;
 	if (ts3Functions.getServerConnectionHandlerList(&servers) == ERROR_ok) {
-		int i = 0;								 
+		int i = 0;
 		while (servers[i]) {
 			connectedServers.push_back(servers[i]);
 			i++;
 		}
 		ts3Functions.freeMemory(servers);
 	}
-	 for (TSServerID server : connectedServers) {
-		 _onConnectStatusChangeEvent(server, STATUS_CONNECTION_ESTABLISHED);
-	 }
+	for (TSServerID server : connectedServers) {
+		_onConnectStatusChangeEvent(server, STATUS_CONNECTION_ESTABLISHED);
+	}
 
 
 
@@ -345,12 +355,15 @@ bool Teamspeak::isConnected(TSServerID serverConnectionHandlerID) {
 }
 
 TSClientID Teamspeak::getMyId(TSServerID serverConnectionHandlerID) {
-	anyID myID(-1);
+	auto myID = getInstance().serverData[serverConnectionHandlerID].getMyClientID();
+	if (myID) return myID;
+
 	if (!isConnected(serverConnectionHandlerID)) return myID;
 	DWORD error;
-	if ((error = ts3Functions.getClientID(serverConnectionHandlerID, &myID)) != ERROR_ok) {
+	if ((error = ts3Functions.getClientID(serverConnectionHandlerID, reinterpret_cast<anyID*>(&myID))) != ERROR_ok) {
 		log("Failure getting client ID", error);
 	}
+	getInstance().serverData[serverConnectionHandlerID].setMyClientID(myID);
 	return myID;
 }
 
@@ -390,8 +403,7 @@ std::string Teamspeak::getServerName(TSServerID serverConnectionHandlerID) {
 	}
 }
 
-//#TODO don't use this to check if a client is talking.. ClientData has a isCurrentlyTalking flag that should be used.
-bool Teamspeak::isTalking(TSServerID currentServerConnectionHandlerID, TSClientID playerId) { //#TODO remove need for myID param
+bool Teamspeak::isTalking(TSServerID currentServerConnectionHandlerID, TSClientID playerId) {
 	int result = 0;
 	DWORD error;
 	if (playerId == getMyId(currentServerConnectionHandlerID)) {

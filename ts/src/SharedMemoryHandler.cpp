@@ -162,7 +162,7 @@ bool SharedMemoryHandler::isConnected() {
 	pData->setLastPluginTick();
 	auto lastGameTick = pData->getLastGameTick();
 	lock.unlock();
-	bool isCurrentlyConnected = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastGameTick).count() < MILLIS_TO_EXPIRE;
+	bool isCurrentlyConnected = (std::chrono::system_clock::now() - lastGameTick) < MILLIS_TO_EXPIRE;
 	if (wasConnected && !isCurrentlyConnected) {
 		onDisconnected();
 	} else if (!wasConnected && isCurrentlyConnected) {

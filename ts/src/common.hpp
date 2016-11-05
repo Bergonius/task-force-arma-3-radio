@@ -22,7 +22,7 @@ using namespace std::literals;
 #define PLUGIN_NAME "task_force_radio"
 #define PLUGIN_NAME_x32 "task_force_radio_win32"
 #define PLUGIN_NAME_x64 "task_force_radio_win64"
-#define MILLIS_TO_EXPIRE 4000  // 4 seconds without updates of client position to expire
+#define MILLIS_TO_EXPIRE 4000ms  // 4 seconds without updates of client position to expire
 
 #define DD_MIN_DISTANCE 70
 #define DD_MAX_DISTANCE 300
@@ -62,7 +62,8 @@ enum class stereoMode {//#TODO move to a real header
 
 struct PTTDelayArguments {
 	std::string commandToBroadcast;
-	uint64 currentServerConnectionHandlerID;
+	TSServerID currentServerConnectionHandlerID;
+	std::chrono::milliseconds pttDelay;
 	std::string subtype;
 	enum class subtypes {
 		digital_lr,

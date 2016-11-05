@@ -37,6 +37,7 @@ void helpers::applyILD(short * samples, size_t sampleCount, int channels, Direct
 		}
 	}
 }
+#define _SPEAKER_POSITIONS_
 #include <X3daudio.h>
 #pragma comment(lib, "x3daudio.lib")
 X3DAUDIO_HANDLE x3d_handle;
@@ -75,7 +76,7 @@ void helpers::applyILD(short * samples, size_t sampleCount, int channels, Positi
 
 	output.SrcChannelCount = 1;
 	output.DstChannelCount = channels;
-	float* volumeMatrix = new float[channels];
+	float* volumeMatrix = new float[channels];	//#TODO minimum 2 channels
 	output.pMatrixCoefficients = volumeMatrix;
 
 
@@ -163,9 +164,8 @@ short* helpers::allocatePool(int sampleCount, int channels, short* samples) {
 void helpers::mix(short* to, short* from, int sampleCount, int channels) {
 	for (int q = 0; q < sampleCount * channels; q++) {
 		int sum = to[q] + from[q];
-		if (sum > SHRT_MAX) sum = SHRT_MAX;
-		else if (sum < SHRT_MIN) sum = SHRT_MIN;
-		to[q] = sum;
+
+		to[q] = std::clamp(sum, SHRT_MIN, SHRT_MAX);
 	}
 }
 
@@ -190,10 +190,6 @@ std::map<std::string, FREQ_SETTINGS> helpers::parseFrequencies(const std::string
 		}
 	}
 	return result;
-}
-
-float helpers::clamp(float x, float a, float b) {
-	return x < a ? a : (x > b ? b : x);
 }
 
 std::pair<std::string, float> helpers::getVehicleDescriptor(std::string vehicleID) { //#TODO move to clientData

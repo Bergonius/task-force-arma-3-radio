@@ -21,7 +21,7 @@ private:
 	void processUnitKilled(std::string &name, TSServerID serverConnection);
 	static std::string ts_info(std::string &command);
 
-	static void process_tangent_off();
+	static void process_tangent_off(PTTDelayArguments arguments);
 
 	static void disableVoiceAndSendCommand(std::string commandToBroadcast, dataType::TSServerID currentServerConnectionHandlerID, bool pressed);
 

@@ -28,9 +28,8 @@ public:
 	static bool isTrue(std::string& string);
 	static short* allocatePool(int sampleCount, int channels, short* samples);
 	static void mix(short* to, short* from, int sampleCount, int channels);
-	static float volumeMultiplifier(const float volumeValue);
+    static float volumeMultiplifier(const float volumeValue);
 	static std::map<std::string, FREQ_SETTINGS> parseFrequencies(const std::string& string);
-	static float clamp(float x, float a, float b);
 	static std::pair<std::string, float> getVehicleDescriptor(std::string vechicleId);
 	//String of format [0.123,0.123,0.123]
 	static std::vector<float> coordStringToVector(const std::string& coordinateString) {
@@ -74,7 +73,7 @@ public:
 	template<class T>	  //#MAYBE audioHelpers?
 	static void processFilterStereo(short * samples, int channels, size_t sampleCount, float gain, T* filter) {
 		static thread_local size_t allocatedFloatsSample = 0;
-		static thread_local float* floatsSample[MAX_CHANNELS]{ nullptr };
+		static thread_local float* floatsSample[MAX_CHANNELS]{ nullptr };	   //#TODO pointers bad. Make vector of Vectors
 
 		if (allocatedFloatsSample < sampleCount)  //Not enough buffer, create new one
 		{

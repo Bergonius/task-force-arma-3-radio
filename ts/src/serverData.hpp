@@ -29,6 +29,9 @@ public:
 
 	}
 private:
+	using LockGuard_shared = LockGuard_shared<ReadWriteLock>;
+	using LockGuard_exclusive = LockGuard_exclusive<ReadWriteLock>;
+	ReadWriteLock m_lock;
 	void clientJoined(TSClientID clientID, const std::string& clientNickname);
 	void clientLeft(TSClientID clientID);
 	void clientUpdated(TSClientID clientID, const std::string& clientNickname);
@@ -36,7 +39,6 @@ private:
 	std::map<TSClientID, std::shared_ptr<clientData>> clientIDToClientData;
 	std::unordered_map<std::string, std::shared_ptr<clientData>> nicknameToClientData;
 	//STRING_TO_CLIENT_DATA_MAP nicknameToClientData;
-	ReadWriteLock m_lock;
 };
 
 
@@ -74,13 +76,15 @@ public:
 
 
 	float getWavesLevel(uint64_t const& serverConnectionHandlerID);	//config
-	//convenience function for serverIdToData[serverConnectionHandlerID].nicknameToClientData.count(nickname) with LockGuard_exclusive<CRITICAL_SECTION>
+	//convenience function for serverIdToData[serverConnectionHandlerID].nicknameToClientData.count(nickname) with LockGuard_exclusive
 	size_t clientDataCount(const uint64_t &serverConnectionHandlerID, const std::string & nickname);
 	void setFreqInfos(const uint64_t &serverConnectionHandlerID, const std::vector<std::string> &tokens);
 private:
-
-	std::map<TSServerID, std::shared_ptr<serverData>> data;
+	using LockGuard_shared = LockGuard_shared<ReadWriteLock>;
+	using LockGuard_exclusive = LockGuard_exclusive<ReadWriteLock>;
 	ReadWriteLock m_lock;
+	std::map<TSServerID, std::shared_ptr<serverData>> data;
+	
 };
 
 

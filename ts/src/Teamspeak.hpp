@@ -15,14 +15,16 @@ public:
 	std::vector<dataType::TSClientID> getMutedClients();
 	void setClientMuteStatus(dataType::TSClientID, bool muted);
 	void clearMutedClients();
-	dataType::TSClientID getMyClientID() const { return myClientID; }
-	void setMyClientID(dataType::TSClientID val) { myClientID = val; }
+	dataType::TSClientID getMyClientID();
+	void setMyClientID(dataType::TSClientID val);
 	std::string getMyOriginalNickname();
 	void setMyOriginalNickname(std::string val);
 	dataType::TSChannelID getMyOriginalChannel();
 	void setMyOriginalChannel(dataType::TSChannelID val);
-	TSChannelID myLastKnownChannel{-1};//#TODO getter/setter
+	TSChannelID myLastKnownChannel{-1};//Only called via Teamspeak Events. So not multi-threaded
 private:
+	using LockGuard_shared = LockGuard_shared<CriticalSectionLock>;
+	using LockGuard_exclusive = LockGuard_exclusive<CriticalSectionLock>;
 	CriticalSectionLock m_criticalSection;
 	std::vector<dataType::TSClientID> mutedClients;
 	std::string myOriginalNickname;

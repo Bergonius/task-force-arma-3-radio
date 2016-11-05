@@ -4,7 +4,7 @@
 #include "task_force_radio.hpp"
 
 void clientData::updatePosition(const unitPositionPacket & packet) {
-	LockGuard_exclusive<ReadWriteLock> lock(&m_lock);
+	LockGuard_exclusive lock(&m_lock);
 
 	clientPosition = packet.position;
 	viewDirection = packet.viewDirection;
@@ -18,6 +18,16 @@ void clientData::updatePosition(const unitPositionPacket & packet) {
 	objectInterception = packet.objectInterception;
 
 
-	lastPositionUpdateTime = GetTickCount();;
+    lastPositionUpdateTime = std::chrono::system_clock::now();
 	dataFrame = TFAR::getInstance().m_gameData.currentDataFrame;
+}
+
+float clientData::effectiveDistanceTo(std::shared_ptr<clientData>& other) {
+	float d = getClientPosition().distanceTo(other->getClientPosition());
+	// (bob distance player) + (bob call TFAR_fnc_calcTerrainInterception) * 7 + (bob call TFAR_fnc_calcTerrainInterception) * 7 * ((bob distance player) / 2000.0)
+	float result = d +
+		+(other->terrainInterception * TFAR::getInstance().m_gameData.terrainIntersectionCoefficient)
+		+ (other->terrainInterception * TFAR::getInstance().m_gameData.terrainIntersectionCoefficient * d / 2000.0f);
+	result *= TFAR::getInstance().m_gameData.receivingDistanceMultiplicator;
+	return result;
 }

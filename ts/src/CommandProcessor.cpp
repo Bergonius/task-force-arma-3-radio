@@ -78,20 +78,17 @@ std::string CommandProcessor::processCommand(const std::string& command) {
 
 		TSClientID playerId(-1);
 		bool clientTalkingOnRadio = false;
-		if (clientDataDir) {
-			auto clientData = clientDataDir->getClientData(nickname);
+		if (!clientDataDir) return  "NOT_SPEAKING";
+		auto clientData = clientDataDir->getClientData(nickname);
 
-			if (clientData) {
-				playerId = clientData->clientId;
-				clientTalkingOnRadio = (clientData->currentTransmittingTangentOverType != LISTEN_TO_NONE) || clientData->clientTalkingNow;
-			}
+		if (clientData) {
+			clientTalkingOnRadio = (clientData->currentTransmittingTangentOverType != OVER_RADIO_TYPE::LISTEN_TO_NONE) || clientData->clientTalkingNow;
+			if (clientData->clientTalkingNow || clientTalkingOnRadio)
+				return "SPEAKING";
 		}
 
-		if (playerId && (Teamspeak::isTalking(currentServerConnectionHandlerID, playerId) || clientTalkingOnRadio))
-			return "SPEAKING";
 		return  "NOT_SPEAKING";
 	}
-
 
 
 	return "FAIL";
@@ -108,17 +105,15 @@ void CommandProcessor::threadRun() {
 		processAsynchronousCommand(command);
 
 
-
-
 	}
 }
 #include "ts3_functions.h"
 extern CriticalSectionLock tangentCriticalSection;
 extern volatile bool vadEnabled;
-extern volatile bool skip_tangent_off;
-extern volatile bool waiting_tangent_off;
+extern volatile bool skipTangentOff;
+extern volatile bool waitingForTangentOff;
 extern volatile DWORD lastInGame;//#TODO rework timeout system
-PTTDelayArguments ptt_arguments;
+
 DEFINE_API_PROFILER(processAsynchronousCommand);
 void CommandProcessor::processAsynchronousCommand(const std::string& command) {
 	Logger::log(LoggerTypes::gameCommands, command);
@@ -221,19 +216,19 @@ void CommandProcessor::processAsynchronousCommand(const std::string& command) {
 			}
 			//Force enable PTT
 			LockGuard_exclusive<CriticalSectionLock> lock(&tangentCriticalSection);
-			if (!waiting_tangent_off) {
+			if (!waitingForTangentOff) {
 				vadEnabled = Teamspeak::hlp_checkVad();
 				if (vadEnabled) Teamspeak::hlp_disableVad();
 				// broadcast info about tangent pressed over all client										
 				disableVoiceAndSendCommand(commandToBroadcast, currentServerConnectionHandlerID, pressed);
-			} else skip_tangent_off = true;
+			} else skipTangentOff = true;
 		} else {
 			PTTDelayArguments args;
 			args.commandToBroadcast = commandToBroadcast;
 			args.currentServerConnectionHandlerID = currentServerConnectionHandlerID;
 			args.subtype = subtype;
-			ptt_arguments = args;
-			std::thread(&CommandProcessor::process_tangent_off).detach();
+			args.pttDelay = TFAR::getInstance().m_gameData.pttDelay;
+			std::thread([this, args]() {process_tangent_off(args); }).detach();
 
 			switch (PTTDelayArguments::stringToSubtype(subtype)) {
 				case PTTDelayArguments::subtypes::digital_lr:
@@ -334,22 +329,21 @@ std::string CommandProcessor::ts_info(std::string &command) {
 	}
 	return "FAIL";
 }
-extern volatile bool pttDelay;
-extern volatile long pttDelayMs;
-volatile bool skip_tangent_off = false;
-volatile bool waiting_tangent_off = false;
-void CommandProcessor::process_tangent_off() {
-	waiting_tangent_off = true;
-	if (pttDelay) {
-		Sleep(pttDelayMs);
-	}
+
+volatile bool skipTangentOff = false;
+volatile bool waitingForTangentOff = false;
+void CommandProcessor::process_tangent_off(PTTDelayArguments arguments) {
+	waitingForTangentOff = true;
+	if (arguments.pttDelay > 0ms)
+		std::this_thread::sleep_for(arguments.pttDelay);
+
 	LockGuard_exclusive<CriticalSectionLock> lock(&tangentCriticalSection);
-	if (!skip_tangent_off) {
+	if (!skipTangentOff) {
 		if (vadEnabled)	Teamspeak::hlp_enableVad();
-		disableVoiceAndSendCommand(ptt_arguments.commandToBroadcast, ptt_arguments.currentServerConnectionHandlerID, false);
-		waiting_tangent_off = false;
+		disableVoiceAndSendCommand(arguments.commandToBroadcast, arguments.currentServerConnectionHandlerID, false);
+		waitingForTangentOff = false;
 	} else {
-		skip_tangent_off = false;
+		skipTangentOff = false;
 	}
 }
 

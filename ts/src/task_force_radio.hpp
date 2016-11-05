@@ -64,6 +64,7 @@ public:
 
 	std::string currentTransmittingRadio{""};//Used for half-duplex mode
 	bool tangentPressed{false};
+	std::chrono::milliseconds pttDelay {0ms};
 	 //#TODO RWLock	remember no Lock for small types.. bool,float,int
 };
 
@@ -82,7 +83,7 @@ public:
 	static std::shared_ptr<CommandProcessor>& getCommandProcessor();
 	static std::shared_ptr<PlaybackHandler>& getPlaybackHandler();
 	static std::shared_ptr<serverDataDirectory>& getServerDataDirectory();
-	static settings config;//I'd like to use settings as the variable name. But... meh
+    static settings config;//I'd like to use settings as the variable name. But... meh
 
 	
 	Signal<void()> onGameStart;
@@ -124,7 +125,7 @@ private:
 	struct Version {   //http://stackoverflow.com/questions/14374272/how-to-parse-version-number-to-compare-it
 		explicit Version(std::string versionStr) {
 			major = 0; minor = 0; revision = 0; build = 0;
-			sscanf(versionStr.c_str(), "%d.%d.%d.%d", &major, &minor, &revision, &build);
+			sscanf(versionStr.c_str(), "%d.%d.%d.%d", &major, &minor, &revision, &build);  //#TODO helpers::split may be better readability We dont need performance here
 		}
 
 		bool operator>(const Version &otherVersion) const {

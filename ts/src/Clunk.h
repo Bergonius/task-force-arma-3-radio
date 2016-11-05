@@ -9,7 +9,7 @@ public:
 
 
 	void process(short * samples, int channels, int sampleCount, Direction3D pos, AngleRadians direction)
-	{
+	{												//#TODO channels should be unsigned. sampleCount also
 		float x, y, z;
 		std::tie(x, y, z) = pos.get();
 
